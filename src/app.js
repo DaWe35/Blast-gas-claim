@@ -25,7 +25,7 @@ const CHART_COLORS = {
 
 // Contract state management
 const state = {
-    web3: new Web3(new Web3.providers.HttpProvider(BLAST_RPC_URL)),
+    provider: new ethers.JsonRpcProvider(BLAST_RPC_URL),
     contract: null,
     currentAddress: '',
     ethPrice: null
@@ -58,7 +58,7 @@ const utils = {
     },
 
     formatEthAndUsd(ethAmount, ethPrice) {
-        const ethValue = parseFloat(state.web3.utils.fromWei(ethAmount, 'ether'));
+        const ethValue = parseFloat(ethers.formatEther(ethAmount));
         const usdValue = ethPrice ? (ethValue * ethPrice) : null;
         
         const formattedEth = this.formatNumber(ethValue);
@@ -81,11 +81,11 @@ const utils = {
     async initContract() {
         const response = await fetch('./contracts/abi/Blast.json');
         const abi = await response.json();
-        return new state.web3.eth.Contract(abi, BLAST_CONTRACT_ADDRESS);
+        return new ethers.Contract(BLAST_CONTRACT_ADDRESS, abi, state.provider);
     },
 
     isValidAddress(address) {
-        return state.web3.utils.isAddress(address);
+        return ethers.isAddress(address);
     },
 
     timeAgo(timestamp) {
@@ -142,14 +142,14 @@ const ui = {
     },
 
     drawGasChart(params, claimRate) {
-        const totalBalance = state.web3.utils.toBN(params.etherBalance);
-        const maturedBalance = state.web3.utils.toBN(params.etherMonths);
-        const earlyClaimable = totalBalance.muln(Math.floor(claimRate * 100)).divn(100);
+        const totalBalance = ethers.getBigInt(params.etherBalance);
+        const maturedBalance = ethers.getBigInt(params.etherMonths);
+        const earlyClaimable = (totalBalance * ethers.getBigInt(Math.floor(claimRate * 100))) / ethers.getBigInt(100);
         
         // Convert to regular numbers for easier calculation
-        const total = parseFloat(state.web3.utils.fromWei(totalBalance));
-        const matured = parseFloat(state.web3.utils.fromWei(maturedBalance));
-        const early = parseFloat(state.web3.utils.fromWei(earlyClaimable));
+        const total = parseFloat(ethers.formatEther(totalBalance));
+        const matured = parseFloat(ethers.formatEther(maturedBalance));
+        const early = parseFloat(ethers.formatEther(earlyClaimable));
         
         // Calculate USD values
         const totalUsd = state.ethPrice ? (total * state.ethPrice) : null;
@@ -180,11 +180,11 @@ const ui = {
     async updateGasClaimInfo(params, ethPrice) {
         const { claimRate, lossRate } = await contractActions.calculateClaimRates(params);
         
-        const etherBalance = state.web3.utils.toBN(params.etherBalance);
-        const potentialLoss = etherBalance.muln(Math.floor(lossRate * 100)).divn(100);
+        const etherBalance = ethers.getBigInt(params.etherBalance);
+        const potentialLoss = (etherBalance * ethers.getBigInt(Math.floor(lossRate * 100))) / ethers.getBigInt(100);
 
         elem('#gasClaimLoss').textContent = 
-            `Potential loss if early claimed: ${utils.formatEthAndUsd(potentialLoss, ethPrice)} (${(lossRate * 100).toFixed(1)}%)`;
+            `Potential loss if early claimed: ${utils.formatEthAndUsd(potentialLoss.toString(), ethPrice)} (${(lossRate * 100).toFixed(1)}%)`;
         elem('#gasMaturityTime').textContent = 
             `Time until full maturity: ${this.formatTimeRemaining(params.lastUpdated)}`;
         
@@ -231,7 +231,7 @@ const ui = {
 const web3Actions = {
     async checkAndSwitchChain() {
         if (!window.ethereum) {
-            throw new Error('Please install ck to perform this action');
+            throw new Error('Please install a web3 wallet to perform this action');
         }
 
         const currentChainId = await window.ethereum.request({ 
@@ -277,10 +277,11 @@ const web3Actions = {
 
     async getContractWithSigner() {
         await this.checkAndSwitchChain();
-        const web3Instance = new Web3(window.ethereum);
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const signer = await provider.getSigner();
         const response = await fetch('./contracts/abi/Blast.json');
         const abi = await response.json();
-        return new web3Instance.eth.Contract(abi, BLAST_CONTRACT_ADDRESS);
+        return new ethers.Contract(BLAST_CONTRACT_ADDRESS, abi, signer);
     }
 };
 
@@ -288,20 +289,27 @@ const web3Actions = {
 const contractActions = {
     async fetchContractData(address) {
         const contract = state.contract;
-        const yieldConfig = await contract.methods.readYieldConfiguration(address).call();
-        const gasParams = await contract.methods.readGasParams(address).call();
-        const claimableYield = await contract.methods.readClaimableYield(address).call();
+        const yieldConfig = await contract.readYieldConfiguration(address);
+        const gasParams = await contract.readGasParams(address);
+        const claimableYield = await contract.readClaimableYield(address);
+
+        // Convert BigInt to string before calculations
+        const etherSeconds = gasParams[0].toString();
+        const etherBalance = gasParams[1].toString();
+        const lastUpdated = Number(gasParams[2]); // This one is safe to convert to number
+        const gasMode = Number(gasParams[3]); // This one is safe to convert to number
 
         return {
             yieldMode: YIELD_MODES[yieldConfig],
-            claimableYield,
+            claimableYield: claimableYield.toString(), // Convert BigInt to string
             gasParams: {
-                etherSeconds: gasParams[0],
-                etherBalance: gasParams[1],
-                lastUpdated: gasParams[2],
-                gasMode: gasParams[3],
-                etherMonths: state.web3.utils.toBN(gasParams[0])
-                    .div(state.web3.utils.toBN(30 * 24 * 60 * 60))
+                etherSeconds,
+                etherBalance,
+                lastUpdated,
+                gasMode,
+                // Calculate etherMonths using BigInt operations
+                etherMonths: (ethers.getBigInt(etherSeconds) * ethers.getBigInt(1) / 
+                    ethers.getBigInt(30 * 24 * 60 * 60)).toString()
             }
         };
     },
@@ -311,9 +319,8 @@ const contractActions = {
             const userAddress = await web3Actions.connectWallet();
             const contractWithSigner = await web3Actions.getContractWithSigner();
 
-            await contractWithSigner.methods
-                .claimAllYield(state.currentAddress, userAddress)
-                .send({ from: userAddress });
+            const tx = await contractWithSigner.claimAllYield(state.currentAddress, userAddress);
+            await tx.wait();
 
             ui.showError('Yield claimed successfully!');
             await checkContract(); // Refresh data
@@ -335,17 +342,17 @@ const contractActions = {
             
             // Calculate potential loss
             const { lossRate } = await contractActions.calculateClaimRates(gasParams);
-            const etherBalance = state.web3.utils.toBN(gasParams.etherBalance);
+            const etherBalance = ethers.getBigInt(gasParams.etherBalance);
             
-            if (etherBalance.isZero()) {
+            if (etherBalance === 0n) {
                 ui.showError('No gas balance available to claim');
                 return;
             }
             
-            const potentialLoss = etherBalance.muln(Math.floor(lossRate * 100)).divn(100);
+            const potentialLoss = (etherBalance * ethers.getBigInt(Math.floor(lossRate * 100))) / ethers.getBigInt(100);
             
             // Show confirmation with potential loss
-            const lossInEthAndUsd = utils.formatEthAndUsd(potentialLoss, state.ethPrice);
+            const lossInEthAndUsd = utils.formatEthAndUsd(potentialLoss.toString(), state.ethPrice);
             const confirmed = window.confirm(
                 `WARNING: Early claiming will result in a loss of ${lossInEthAndUsd} ` +
                 `(${(lossRate * 100).toFixed(1)}% of your gas balance)\n\n` +
@@ -357,12 +364,11 @@ const contractActions = {
             }
 
             // Perform the claim
-            await contractWithSigner.methods
-                .claimAllGas(state.currentAddress, userAddress)
-                .send({ from: userAddress });
+            const tx = await contractWithSigner.claimAllGas(state.currentAddress, userAddress);
+            await tx.wait();
 
             ui.showError('Gas claimed successfully!');
-            await checkContract(); // Refresh data
+            await checkContract();
         } catch (error) {
             if (!error.message.includes('User rejected') && !error.message.includes('user rejected')) {
                 ui.showError('Error claiming gas: ' + error.message);
@@ -375,12 +381,11 @@ const contractActions = {
             const userAddress = await web3Actions.connectWallet();
             const contractWithSigner = await web3Actions.getContractWithSigner();
 
-            await contractWithSigner.methods
-                .claimMaxGas(state.currentAddress, userAddress)
-                .send({ from: userAddress });
+            const tx = await contractWithSigner.claimMaxGas(state.currentAddress, userAddress);
+            await tx.wait();
 
             ui.showError('Matured gas claimed successfully!');
-            await checkContract(); // Refresh data
+            await checkContract();
         } catch (error) {
             if (!error.message.includes('User rejected') && !error.message.includes('user rejected')) {
                 ui.showError('Error claiming matured gas: ' + error.message);
@@ -389,17 +394,16 @@ const contractActions = {
     },
 
     async calculateClaimRates(gasParams) {
-        // Current timestamp in seconds
         const now = Math.floor(Date.now() / 1000);
         
         // Constants from Blast documentation
-        const MATURITY_PERIOD = 30 * 24 * 60 * 60; // 30 days in seconds
-        const MIN_CLAIM_RATE = 0.5; // 50%
-        const MAX_CLAIM_RATE = 1.0; // 100%
+        const MATURITY_PERIOD = 30 * 24 * 60 * 60;
+        const MIN_CLAIM_RATE = 0.5;
+        const MAX_CLAIM_RATE = 1.0;
         
-        // Convert from wei to ether for cleaner math
-        const etherBalance = state.web3.utils.fromWei(gasParams.etherBalance, 'ether');
-        const etherSeconds = state.web3.utils.fromWei(gasParams.etherSeconds, 'ether');
+        // Convert from wei to ether using string inputs
+        const etherBalance = parseFloat(ethers.formatEther(gasParams.etherBalance));
+        const etherSeconds = parseFloat(ethers.formatEther(gasParams.etherSeconds));
         
         if (etherBalance <= 0) {
             return { claimRate: 0, lossRate: 0 };
@@ -424,7 +428,7 @@ const contractActions = {
         return { 
             claimRate,
             lossRate,
-            averageAge: Math.floor(averageAge) // in seconds, for debugging
+            averageAge: Math.floor(averageAge)
         };
     }
 };
