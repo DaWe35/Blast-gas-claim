@@ -23,21 +23,38 @@ const CHART_COLORS = {
     early: '#FFC107'      // Amber
 };
 
+// Add cache-related constants at the top with other constants
+const ETH_PRICE_CACHE_DURATION = 60 * 1000; // 1 minute in milliseconds
+
 // Contract state management
 const state = {
     provider: new ethers.JsonRpcProvider(BLAST_RPC_URL),
     contract: null,
     currentAddress: '',
-    ethPrice: null
+    ethPrice: null,
+    ethPriceLastFetch: null  // Timestamp of last ETH price fetch
 };
 
 // Utility functions
 const utils = {
     async getEthPrice() {
+        const now = Date.now();
+        
+        // Return cached price if it's still valid
+        if (state.ethPrice && state.ethPriceLastFetch && 
+            (now - state.ethPriceLastFetch) < ETH_PRICE_CACHE_DURATION) {
+            return state.ethPrice;
+        }
+
         try {
             const response = await fetch(ETH_PRICE_API);
             const data = await response.json();
-            return data.ethereum.usd;
+            
+            // Update cache
+            state.ethPrice = data.ethereum.usd;
+            state.ethPriceLastFetch = now;
+            
+            return state.ethPrice;
         } catch (error) {
             console.error('Error fetching ETH price:', error);
             return null;
