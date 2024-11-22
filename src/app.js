@@ -33,7 +33,7 @@ async function initContract() {
 }
 
 async function checkContract() {
-    const contractAddress = document.getElementById('contractAddress').value;
+    const contractAddress = elem('#contractAddress').value;
     if (!web3.utils.isAddress(contractAddress)) {
         alert('Please enter a valid Ethereum address');
         return;
@@ -45,7 +45,7 @@ async function checkContract() {
     try {
         // Read Yield Configuration
         const yieldConfig = await contract.methods.readYieldConfiguration(contractAddress).call();
-        document.getElementById('yieldConfig').textContent = `Mode: ${YIELD_MODES[yieldConfig]}`;
+        elem('#yieldConfig').textContent = `Mode: ${YIELD_MODES[yieldConfig]}`;
 
         // Read Gas Parameters
         const gasParams = await contract.methods.readGasParams(contractAddress).call();
@@ -54,24 +54,24 @@ async function checkContract() {
         const lastUpdated = gasParams[2];
         const gasMode = gasParams[3];
 
-        document.getElementById('gasParamsBalance').textContent = 
+        elem('#gasParamsBalance').textContent = 
             `Ether Balance: ${formatEthAndUsd(etherBalance, ethPrice)}`;
-        document.getElementById('gasParamsLastUpdate').textContent = 
+        elem('#gasParamsLastUpdate').textContent = 
             `Last Update: ${new Date(lastUpdated * 1000).toLocaleString()}`;
         
         const secondsPerMonth = web3.utils.toBN(30 * 24 * 60 * 60);
         const etherMonths = web3.utils.toBN(etherSeconds).div(secondsPerMonth);
-        document.getElementById('gasParamsGasMonths').textContent = 
+        elem('#gasParamsGasMonths').textContent = 
             `Claimable Matured Gas: ${formatEthAndUsd(etherMonths, ethPrice)}`;
-        document.getElementById('gasParamsMode').textContent = `Gas Mode: ${GAS_MODES[gasMode]}`;
+        elem('#gasParamsMode').textContent = `Gas Mode: ${GAS_MODES[gasMode]}`;
 
         // Read Claimable Yield
         const claimableYield = await contract.methods.readClaimableYield(contractAddress).call();
-        document.getElementById('claimableYield').textContent = 
+        elem('#claimableYield').textContent = 
             `Claimable yield: ${formatEthAndUsd(claimableYield, ethPrice)}`;
 
         // Show results section
-        document.querySelector('.results-section').style.display = 'block';
+        elem('.results-section').style.display = 'block';
     } catch (error) {
         console.error('Error fetching contract data:', error);
         alert('Error fetching contract data. Please check the console for details.');
@@ -80,7 +80,7 @@ async function checkContract() {
 
 // Simple initialization
 function init() {
-    document.getElementById('checkContract').addEventListener('click', checkContract);
+    elem('#checkContract').addEventListener('click', checkContract);
 }
 
 window.addEventListener('load', init); 
