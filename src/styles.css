@@ -189,7 +189,8 @@ header {
     white-space: nowrap;
     position: absolute;
     right: 10px;
-    text-shadow: 0 0 2px rgba(0,0,0,0.5);
+    text-shadow: 0 0 8px rgba(0,0,0,1),   /* Increased blur radius */
+                 0 0 4px rgba(0,0,0,1);    /* Added second shadow layer */
 }
 
 .w-100 {
