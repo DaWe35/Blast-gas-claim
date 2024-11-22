@@ -1,5 +1,7 @@
 # Blast Contract Inspector
 
+https://gasclaim.coolhd.hu
+
 A web application that allows users to inspect Blast protocol contracts, displaying yield configurations, gas parameters, and claimable yields with both ETH and USD values.
 
 ## Features
