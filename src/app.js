@@ -44,12 +44,38 @@ const utils = {
         }
     },
 
+    getSignificantDecimals(value) {
+        if (value === 0) return 2;
+        if (value >= 1) return 6;
+        const decimals = -Math.floor(Math.log10(value)) + 2;
+        return Math.min(decimals, 18); // Cap at 18 decimals (ETH's max precision)
+    },
+
+    formatNumber(value, includeDecimals = true) {
+        if (!includeDecimals) return value.toString();
+        const decimals = this.getSignificantDecimals(value);
+        return value.toFixed(decimals);
+    },
+
     formatEthAndUsd(ethAmount, ethPrice) {
         const ethValue = parseFloat(state.web3.utils.fromWei(ethAmount, 'ether'));
-        const usdValue = ethPrice ? (ethValue * ethPrice).toFixed(2) : null;
+        const usdValue = ethPrice ? (ethValue * ethPrice) : null;
+        
+        const formattedEth = this.formatNumber(ethValue);
+        const formattedUsd = usdValue ? this.formatNumber(usdValue) : null;
+
         return usdValue 
-            ? `${ethValue.toFixed(6)} ETH ($${usdValue} USD)`
-            : `${ethValue.toFixed(6)} ETH`;
+            ? `${formattedEth} ETH ($${formattedUsd} USD)`
+            : `${formattedEth} ETH`;
+    },
+
+    formatChartValue(ethValue, usdValue) {
+        const formattedEth = this.formatNumber(ethValue);
+        const formattedUsd = usdValue ? this.formatNumber(usdValue) : null;
+
+        return `${formattedEth} ETH${
+            usdValue ? ` ($${formattedUsd})` : ''
+        }`;
     },
 
     async initContract() {
@@ -126,9 +152,9 @@ const ui = {
         const early = parseFloat(state.web3.utils.fromWei(earlyClaimable));
         
         // Calculate USD values
-        const totalUsd = state.ethPrice ? (total * state.ethPrice).toFixed(2) : null;
-        const maturedUsd = state.ethPrice ? (matured * state.ethPrice).toFixed(2) : null;
-        const earlyUsd = state.ethPrice ? (early * state.ethPrice).toFixed(2) : null;
+        const totalUsd = state.ethPrice ? (total * state.ethPrice) : null;
+        const maturedUsd = state.ethPrice ? (matured * state.ethPrice) : null;
+        const earlyUsd = state.ethPrice ? (early * state.ethPrice) : null;
         
         // Update bar widths and values
         const maturedPercent = (matured / total * 100).toFixed(2);
@@ -136,19 +162,19 @@ const ui = {
         
         // Update total value
         elem('.chart-bar-total .chart-value').textContent = 
-            `${total.toFixed(4)} ETH${totalUsd ? ` ($${totalUsd})` : ''}`;
+            utils.formatChartValue(total, totalUsd);
         
         // Update matured bar
         const maturedBar = elem('.chart-bar-matured');
         maturedBar.style.width = `${maturedPercent}%`;
         maturedBar.querySelector('.chart-value').textContent = 
-            `${matured.toFixed(4)} ETH${maturedUsd ? ` ($${maturedUsd})` : ''}`;
+            utils.formatChartValue(matured, maturedUsd);
         
         // Update early claimable bar
         const earlyBar = elem('.chart-bar-early');
         earlyBar.style.width = `${earlyPercent}%`;
         earlyBar.querySelector('.chart-value').textContent = 
-            `${early.toFixed(4)} ETH${earlyUsd ? ` ($${earlyUsd})` : ''}`;
+            utils.formatChartValue(early, earlyUsd);
     },
 
     async updateGasClaimInfo(params, ethPrice) {
