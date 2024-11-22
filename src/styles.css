@@ -61,6 +61,7 @@ a {
 #checkContract {
     padding: 12px 24px;
     white-space: nowrap;
+    min-width: 160px;
 }
 
 button {
@@ -193,4 +194,30 @@ header {
 
 .w-100 {
     width: 100%;
+}
+
+.loading {
+    position: relative;
+    cursor: wait;
+    opacity: 0.7;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 50%;
+    right: 10px;
+    margin-top: -8px;
+    border: 2px solid transparent;
+    border-top-color: #000;
+    border-radius: 50%;
+    animation: loading-spinner 0.6s linear infinite;
+}
+
+@keyframes loading-spinner {
+    to {
+        transform: rotate(360deg);
+    }
 }

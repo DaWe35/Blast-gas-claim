@@ -180,6 +180,24 @@ const ui = {
         const hours = Math.floor((remainingSeconds % (24 * 60 * 60)) / (60 * 60));
         
         return `${days}d ${hours}h`;
+    },
+
+    setLoading(button, isLoading, options = {}) {
+        const defaultText = button.getAttribute('data-default-text') || button.textContent;
+        const loadingText = options.loadingText || 'Loading...';
+        
+        if (isLoading) {
+            if (!button.hasAttribute('data-default-text')) {
+                button.setAttribute('data-default-text', defaultText);
+            }
+            button.classList.add('loading');
+            button.disabled = true;
+            button.textContent = loadingText;
+        } else {
+            button.classList.remove('loading');
+            button.disabled = false;
+            button.textContent = button.getAttribute('data-default-text') || defaultText;
+        }
     }
 };
 
@@ -210,7 +228,7 @@ const web3Actions = {
                             params: [BLAST_CHAIN_CONFIG],
                         });
                     } catch (addError) {
-                        throw new Error('Failed to add Blast network to MetaMask');
+                        throw new Error('Failed to add Blast network to your wallet');
                     }
                 } else {
                     throw new Error('Failed to switch to Blast network');
@@ -221,7 +239,7 @@ const web3Actions = {
 
     async connectWallet() {
         if (!window.ethereum) {
-            throw new Error('Please install MetaMask to perform this action');
+            throw new Error('Please install a web3 wallet to perform this action (Rabby wallet is recommended)');
         }
         
         await this.checkAndSwitchChain();
@@ -387,17 +405,21 @@ const contractActions = {
 
 // Main function to check contract
 async function checkContract() {
+    const button = elem('#checkContract');
     const address = elem('#contractAddress').value;
+    
     if (!utils.isValidAddress(address)) {
         ui.showError('Please enter a valid Ethereum address');
         return;
     }
 
-    state.currentAddress = address;
-    state.contract = state.contract || await utils.initContract();
-    state.ethPrice = await utils.getEthPrice();
-    
     try {
+        ui.setLoading(button, true);
+
+        state.currentAddress = address;
+        state.contract = state.contract || await utils.initContract();
+        state.ethPrice = await utils.getEthPrice();
+        
         const data = await contractActions.fetchContractData(address);
         
         ui.updateYieldConfig(data.yieldMode);
@@ -407,6 +429,8 @@ async function checkContract() {
         ui.showResults(true);
     } catch (error) {
         ui.showError('Error fetching contract data: ' + error.message);
+    } finally {
+        ui.setLoading(button, false);
     }
 }
 
