@@ -2,10 +2,17 @@
     --background: #0f0f0f;
     --text-primary: #d3d3d3;
     --text-secondary: #888888;
-    --button-border: #333333;
+    --button-bg: #333333;
     --block-size: 170px;
     --block-selection-border: inset 0px 0px 0px 1px rgba(255, 255, 255, 0.0);
     --mdi-party-popper: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M14.53 1.45L13.45 2.53L15.05 4.13C15.27 4.38 15.38 4.67 15.38 5S15.27 5.64 15.05 5.86L11.5 9.47L12.5 10.55L16.13 6.94C16.66 6.35 16.92 5.7 16.92 5C16.92 4.3 16.66 3.64 16.13 3.05L14.53 1.45M10.55 3.47L9.47 4.55L10.08 5.11C10.3 5.33 10.41 5.63 10.41 6S10.3 6.67 10.08 6.89L9.47 7.45L10.55 8.53L11.11 7.92C11.64 7.33 11.91 6.69 11.91 6C11.91 5.28 11.64 4.63 11.11 4.03L10.55 3.47M21 5.06C20.31 5.06 19.67 5.33 19.08 5.86L13.45 11.5L14.53 12.5L20.11 6.94C20.36 6.69 20.66 6.56 21 6.56S21.64 6.69 21.89 6.94L22.5 7.55L23.53 6.47L22.97 5.86C22.38 5.33 21.72 5.06 21 5.06M7 8L2 22L16 17L7 8M19 11.06C18.31 11.06 17.67 11.33 17.08 11.86L15.47 13.47L16.55 14.55L18.11 12.94C18.36 12.69 18.66 12.56 19 12.56S19.64 12.69 19.89 12.94L20.5 13.55L21.53 12.47L20.97 11.86C20.38 11.33 19.72 11.06 19 11.06Z'/%3E%3C/svg%3E");
+    --yellow-100: 252 253 199;
+    --yellow-200: 247 247 127;
+    --yellow-300: 252 252 3;
+    --yellow-400: 226 219 3;
+    --yellow-500: 183 178 31;
+    --yellow-600: 123 118 56;
+    --yellow-700: 89 85 34;
 }
 
 * {
@@ -33,27 +40,38 @@ a {
 }
 
 .input-section {
-    margin: 20px 0;
-    text-align: center;
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    margin-bottom: 20px;
+    margin-top: 40px;
 }
 
 #contractAddress {
-    width: 400px;
-    padding: 10px;
-    font-size: 16px;
+    flex: 1;
+    width: 500px;
+    max-width: 100%;
+    padding: 12px 24px;
+    font-size: 20px;
     border: 1px solid #ccc;
     border-radius: 4px;
     margin-right: 10px;
 }
 
 #checkContract {
-    padding: 10px 20px;
+    padding: 12px 24px;
+    white-space: nowrap;
+}
+
+button {
+    padding: 6px 16px;
     font-size: 20px;
-    background-color: var(--button-border);
-    color: var(--text-primary);
-    border: none;
+    background-color: rgb(var(--yellow-400));
+    color: #000;
     border-radius: 4px;
     cursor: pointer;
+    border: none;
+    box-shadow: 0 0px 6px rgba(0,0,0,0.2);
 }
 
 .results-section {
@@ -83,7 +101,7 @@ header {
     display: flex;
     align-items: center;
     margin: 20px auto;
-    padding: 0 20px;
+    padding: 0px;
     max-width: 1200px;
 }
 
@@ -113,21 +131,6 @@ header {
     vertical-align: middle;
 }
 
-button {
-    padding: 8px 16px;
-    background: transparent;
-    border: 1px solid var(--button-border);
-    color: var(--text-primary);
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: background-color 0.2s;
-}
-
-button:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-}
-
 .github {
     display: flex;
     align-items: center;
@@ -139,19 +142,55 @@ button:hover {
     height: 16px;
 }
 
-button {
-    color: var(--text-secondary);
-    text-decoration: none;
-    font-size: 20px;
-    margin-right: 20px;
-    margin-bottom: 20px;
-    padding: 8px 16px;
-    border: 1px solid var(--button-border);
-    border-radius: 4px;
-    transition: all 0.2s;
+.button-group {
+    margin-top: 20px;
 }
 
-button:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+.chart-row {
+    display: flex;
+    align-items: center;
+    margin: 15px 0;
+    gap: 20px;
+}
+
+.chart-label {
+    width: 120px;
     color: var(--text-primary);
+    font-size: 14px;
+}
+
+.chart-bar-container {
+    flex-grow: 1;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+}
+
+.chart-bar {
+    height: 100%;
+    transition: width 0.3s ease;
+    display: flex;
+    align-items: center;
+    padding-right: 10px;
+    justify-content: flex-end;
+    background: linear-gradient(90deg, 
+        rgb(var(--yellow-700)) 0%, 
+        rgb(var(--yellow-300)) 300px,
+        rgb(var(--yellow-700)) 580px
+    );
+}
+
+.chart-value {
+    color: var(--text-primary);
+    font-size: 14px;
+    white-space: nowrap;
+    position: absolute;
+    right: 10px;
+    text-shadow: 0 0 2px rgba(0,0,0,0.5);
+}
+
+.w-100 {
+    width: 100%;
 }

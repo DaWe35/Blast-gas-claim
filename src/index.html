@@ -7,22 +7,22 @@
     <link rel="stylesheet" href="styles.css?forceReload=1">
 </head>
 <body>
-    <header>
-        <div class="logo">
-            <img src="https://blastscan.io/assets/blast/images/svg/logos/chain-dark.svg?v=24.11.1.0" alt="Logo" class="logo-img">
-            <h1>Blast Gas Claim</h1>
-            <a href="https://github.com/DaWe35/Blast-gas-claim" target="_blank">
-                <span class="mdi mdi-github"></span>
-            </a>
-            <a href="https://blastscan.io/address/0x4300000000000000000000000000000000000002" target="_blank">
-                <img src="https://blastscan.io/assets/blast/images/svg/logos/chain-dark.svg?v=24.11.1.0" 
-                     alt="Blast Logo" 
-                     class="href-logo">
-            </a>
-        </div>
-    </header>
-
     <div class="container">
+        <header>
+            <div class="logo">
+                <img src="https://blastscan.io/assets/blast/images/svg/logos/chain-dark.svg?v=24.11.1.0" alt="Logo" class="logo-img">
+                <h1>Blast Gas Claim</h1>
+                <a href="https://github.com/DaWe35/Blast-gas-claim" target="_blank">
+                    <span class="mdi mdi-github"></span>
+                </a>
+                <a href="https://blastscan.io/address/0x4300000000000000000000000000000000000002" target="_blank">
+                    <img src="https://blastscan.io/assets/blast/images/svg/logos/chain-dark.svg?v=24.11.1.0" 
+                        alt="Blast Logo" 
+                        class="href-logo">
+                </a>
+            </div>
+        </header>
+
         <div class="input-section">
             <input type="text" id="contractAddress" placeholder="Enter contract address">
             <button id="checkContract">Check Contract</button>
@@ -41,12 +41,35 @@
             <div class="result-card">
                 <h3>Gas Parameters</h3>
                 <p id="gasParamsMode"></p>
-                <p id="gasParamsBalance"></p>
                 <p id="gasParamsLastUpdate"></p>
-                <p id="gasParamsGasMonths"></p>
-                <p id="gasClaimableNow"></p>
-                <p id="gasClaimLoss"></p>
                 <p id="gasMaturityTime"></p>
+                <p id="gasClaimLoss"></p>
+                
+                <div class="chart-row">
+                    <div class="chart-label">Gas Balance</div>
+                    <div class="chart-bar-container">
+                        <div class="chart-bar chart-bar-total w-100">
+                            <span class="chart-value"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-row">
+                    <div class="chart-label">Early Claimable</div>
+                    <div class="chart-bar-container">
+                        <div class="chart-bar chart-bar-early">
+                            <span class="chart-value"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-row">
+                    <div class="chart-label">Matured Gas</div>
+                    <div class="chart-bar-container">
+                        <div class="chart-bar chart-bar-matured">
+                            <span class="chart-value"></span>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="button-group">
                     <button id="claimMaxGasBtn" class="btn">Claim Matured Gas</button>
                     <button id="claimAllGasBtn" class="btn">Early Claim All Gas</button>

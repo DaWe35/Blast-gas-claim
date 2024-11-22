@@ -16,6 +16,13 @@ const BLAST_CHAIN_CONFIG = {
     blockExplorerUrls: ['https://blastscan.io']
 };
 
+// Add this to the top of the file with other constants
+const CHART_COLORS = {
+    total: '#4CAF50',     // Green
+    matured: '#2196F3',   // Blue
+    early: '#FFC107'      // Amber
+};
+
 // Contract state management
 const state = {
     web3: new Web3(new Web3.providers.HttpProvider(BLAST_RPC_URL)),
@@ -53,6 +60,28 @@ const utils = {
 
     isValidAddress(address) {
         return state.web3.utils.isAddress(address);
+    },
+
+    timeAgo(timestamp) {
+        const seconds = Math.floor(Date.now() / 1000 - timestamp);
+        
+        const intervals = {
+            year: 31536000,
+            month: 2592000,
+            week: 604800,
+            day: 86400,
+            hour: 3600,
+            minute: 60
+        };
+        
+        for (const [unit, secondsInUnit] of Object.entries(intervals)) {
+            const interval = Math.floor(seconds / secondsInUnit);
+            if (interval >= 1) {
+                return interval === 1 ? `1 ${unit} ago` : `${interval} ${unit}s ago`;
+            }
+        }
+        
+        return 'just now';
     }
 };
 
@@ -68,13 +97,12 @@ const ui = {
     },
 
     updateGasParams(params, ethPrice) {
-        const { etherBalance, lastUpdated, etherMonths, gasMode } = params;
-        elem('#gasParamsBalance').textContent = 
-            `Gas Balance: ${utils.formatEthAndUsd(etherBalance, ethPrice)}`;
-        elem('#gasParamsLastUpdate').textContent = 
-            `Last Changed: ${new Date(lastUpdated * 1000).toLocaleString()}`;
-        elem('#gasParamsGasMonths').textContent = 
-            `Claimable Matured Gas: ${utils.formatEthAndUsd(etherMonths, ethPrice)}`;
+        const { lastUpdated, gasMode } = params;
+        const fullDate = new Date(lastUpdated * 1000).toLocaleString();
+        const timeAgoStr = utils.timeAgo(lastUpdated);
+        
+        elem('#gasParamsLastUpdate').textContent = `Last Balance Change: ${timeAgoStr}`;
+        elem('#gasParamsLastUpdate').title = fullDate;
         elem('#gasParamsMode').textContent = `Gas Mode: ${GAS_MODES[gasMode]}`;
     },
 
@@ -87,19 +115,55 @@ const ui = {
         elem('.results-section').style.display = show ? 'block' : 'none';
     },
 
+    drawGasChart(params, claimRate) {
+        const totalBalance = state.web3.utils.toBN(params.etherBalance);
+        const maturedBalance = state.web3.utils.toBN(params.etherMonths);
+        const earlyClaimable = totalBalance.muln(Math.floor(claimRate * 100)).divn(100);
+        
+        // Convert to regular numbers for easier calculation
+        const total = parseFloat(state.web3.utils.fromWei(totalBalance));
+        const matured = parseFloat(state.web3.utils.fromWei(maturedBalance));
+        const early = parseFloat(state.web3.utils.fromWei(earlyClaimable));
+        
+        // Calculate USD values
+        const totalUsd = state.ethPrice ? (total * state.ethPrice).toFixed(2) : null;
+        const maturedUsd = state.ethPrice ? (matured * state.ethPrice).toFixed(2) : null;
+        const earlyUsd = state.ethPrice ? (early * state.ethPrice).toFixed(2) : null;
+        
+        // Update bar widths and values
+        const maturedPercent = (matured / total * 100).toFixed(2);
+        const earlyPercent = (early / total * 100).toFixed(2);
+        
+        // Update total value
+        elem('.chart-bar-total .chart-value').textContent = 
+            `${total.toFixed(4)} ETH${totalUsd ? ` ($${totalUsd})` : ''}`;
+        
+        // Update matured bar
+        const maturedBar = elem('.chart-bar-matured');
+        maturedBar.style.width = `${maturedPercent}%`;
+        maturedBar.querySelector('.chart-value').textContent = 
+            `${matured.toFixed(4)} ETH${maturedUsd ? ` ($${maturedUsd})` : ''}`;
+        
+        // Update early claimable bar
+        const earlyBar = elem('.chart-bar-early');
+        earlyBar.style.width = `${earlyPercent}%`;
+        earlyBar.querySelector('.chart-value').textContent = 
+            `${early.toFixed(4)} ETH${earlyUsd ? ` ($${earlyUsd})` : ''}`;
+    },
+
     async updateGasClaimInfo(params, ethPrice) {
         const { claimRate, lossRate } = await contractActions.calculateClaimRates(params);
         
         const etherBalance = state.web3.utils.toBN(params.etherBalance);
-        const maxClaimable = etherBalance.muln(Math.floor(claimRate * 100)).divn(100);
         const potentialLoss = etherBalance.muln(Math.floor(lossRate * 100)).divn(100);
 
-        elem('#gasClaimableNow').textContent = 
-            `Maximum claimable now: ${utils.formatEthAndUsd(maxClaimable, ethPrice)}`;
         elem('#gasClaimLoss').textContent = 
-            `Potential loss if claimed now: ${utils.formatEthAndUsd(potentialLoss, ethPrice)} (${(lossRate * 100).toFixed(1)}%)`;
+            `Potential loss if early claimed: ${utils.formatEthAndUsd(potentialLoss, ethPrice)} (${(lossRate * 100).toFixed(1)}%)`;
         elem('#gasMaturityTime').textContent = 
             `Time until full maturity: ${this.formatTimeRemaining(params.lastUpdated)}`;
+        
+        // Draw the chart
+        this.drawGasChart(params, claimRate);
     },
 
     formatTimeRemaining(lastUpdated) {
@@ -210,7 +274,9 @@ const contractActions = {
             ui.showError('Yield claimed successfully!');
             await checkContract(); // Refresh data
         } catch (error) {
-            ui.showError('Error claiming yield: ' + error.message);
+            if (!error.message.includes('User rejected') && !error.message.includes('user rejected')) {
+                ui.showError('Error claiming yield: ' + error.message);
+            }
         }
     },
 
@@ -218,7 +284,35 @@ const contractActions = {
         try {
             const userAddress = await web3Actions.connectWallet();
             const contractWithSigner = await web3Actions.getContractWithSigner();
+            
+            // Fetch latest gas params
+            const data = await contractActions.fetchContractData(state.currentAddress);
+            const gasParams = data.gasParams;
+            
+            // Calculate potential loss
+            const { lossRate } = await contractActions.calculateClaimRates(gasParams);
+            const etherBalance = state.web3.utils.toBN(gasParams.etherBalance);
+            
+            if (etherBalance.isZero()) {
+                ui.showError('No gas balance available to claim');
+                return;
+            }
+            
+            const potentialLoss = etherBalance.muln(Math.floor(lossRate * 100)).divn(100);
+            
+            // Show confirmation with potential loss
+            const lossInEthAndUsd = utils.formatEthAndUsd(potentialLoss, state.ethPrice);
+            const confirmed = window.confirm(
+                `WARNING: Early claiming will result in a loss of ${lossInEthAndUsd} ` +
+                `(${(lossRate * 100).toFixed(1)}% of your gas balance)\n\n` +
+                `Are you sure you want to proceed with early claiming?`
+            );
+            
+            if (!confirmed) {
+                return;
+            }
 
+            // Perform the claim
             await contractWithSigner.methods
                 .claimAllGas(state.currentAddress, userAddress)
                 .send({ from: userAddress });
@@ -226,7 +320,9 @@ const contractActions = {
             ui.showError('Gas claimed successfully!');
             await checkContract(); // Refresh data
         } catch (error) {
-            ui.showError('Error claiming gas: ' + error.message);
+            if (!error.message.includes('User rejected') && !error.message.includes('user rejected')) {
+                ui.showError('Error claiming gas: ' + error.message);
+            }
         }
     },
 
@@ -242,27 +338,50 @@ const contractActions = {
             ui.showError('Matured gas claimed successfully!');
             await checkContract(); // Refresh data
         } catch (error) {
-            ui.showError('Error claiming matured gas: ' + error.message);
+            if (!error.message.includes('User rejected') && !error.message.includes('user rejected')) {
+                ui.showError('Error claiming matured gas: ' + error.message);
+            }
         }
     },
 
     async calculateClaimRates(gasParams) {
         // Current timestamp in seconds
         const now = Math.floor(Date.now() / 1000);
-        const timeElapsed = now - gasParams.lastUpdated;
         
-        // Based on Blast docs: 30 day maturity period, 50% initial rate to 100% final rate
+        // Constants from Blast documentation
         const MATURITY_PERIOD = 30 * 24 * 60 * 60; // 30 days in seconds
         const MIN_CLAIM_RATE = 0.5; // 50%
+        const MAX_CLAIM_RATE = 1.0; // 100%
         
-        if (timeElapsed >= MATURITY_PERIOD) {
-            return { claimRate: 1, lossRate: 0 }; // Fully matured
+        // Convert from wei to ether for cleaner math
+        const etherBalance = state.web3.utils.fromWei(gasParams.etherBalance, 'ether');
+        const etherSeconds = state.web3.utils.fromWei(gasParams.etherSeconds, 'ether');
+        
+        if (etherBalance <= 0) {
+            return { claimRate: 0, lossRate: 0 };
         }
-
-        const claimRate = MIN_CLAIM_RATE + ((1 - MIN_CLAIM_RATE) * timeElapsed / MATURITY_PERIOD);
-        const lossRate = 1 - claimRate;
         
-        return { claimRate, lossRate };
+        // Calculate average age of gas fees in seconds
+        // etherSeconds / etherBalance gives us the weighted average time
+        const averageAge = etherSeconds / etherBalance;
+        
+        // Calculate claim rate based on average age
+        let claimRate;
+        if (averageAge >= MATURITY_PERIOD) {
+            claimRate = MAX_CLAIM_RATE;
+        } else {
+            // Linear interpolation from MIN_CLAIM_RATE to MAX_CLAIM_RATE
+            const maturityProgress = Math.min(averageAge / MATURITY_PERIOD, 1);
+            claimRate = MIN_CLAIM_RATE + (MAX_CLAIM_RATE - MIN_CLAIM_RATE) * maturityProgress;
+        }
+        
+        const lossRate = MAX_CLAIM_RATE - claimRate;
+        
+        return { 
+            claimRate,
+            lossRate,
+            averageAge: Math.floor(averageAge) // in seconds, for debugging
+        };
     }
 };
 
