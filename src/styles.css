@@ -106,27 +106,28 @@ header {
     max-width: 1200px;
 }
 
-.logo {
+header {
     display: flex;
     align-items: center;
     gap: 10px;
 }
 
-.logo .mdi {
+header .mdi {
     font-size: 24px;
     color: #FFF;
 }
 
-.logo-img {
+.main-logo {
     width: 40px;
     height: 40px;
 }
 
-.logo h1 {
+header h1 {
     margin-right: 10px;
+    font-size: 3rem;
 }
 
-.href-logo {
+header img {
     width: 24px;
     height: 24px;
     vertical-align: middle;
