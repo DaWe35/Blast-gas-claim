@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  blast-gas-claim:
+    image: busybox
+    container_name: blast-gas-claim
+    ports:
+      - "9998:80"
+    volumes:
+      - ./src:/var/www:ro
+    command: httpd -f -p 80 -h /var/www
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    stop_grace_period: 1s
+ 

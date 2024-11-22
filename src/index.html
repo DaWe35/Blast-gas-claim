@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blast Gas Claim</title>
+    <link rel="stylesheet" href="styles.css?forceReload=1">
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <img src="https://blastscan.io/assets/blast/images/svg/logos/chain-dark.svg?v=24.11.1.0" alt="Logo" class="logo-img">
+            <h1>Blast Gas Claim</h1>
+            <a href="https://github.com/DaWe35/Blast-gas-claim" target="_blank">
+                <span class="mdi mdi-github"></span>
+            </a>
+            <a href="https://blastscan.io/address/0x4300000000000000000000000000000000000002" target="_blank">
+                <img src="https://blastscan.io/assets/blast/images/svg/logos/chain-dark.svg?v=24.11.1.0" 
+                     alt="Blast Logo" 
+                     class="href-logo">
+            </a>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="input-section">
+            <input type="text" id="contractAddress" placeholder="Enter contract address">
+            <button id="checkContract">Check Contract</button>
+        </div>
+
+        <div class="results-section" style="display: none;">
+            <div class="result-card">
+                <h3>Yield Configuration</h3>
+                <p id="yieldConfig"></p>
+                <p id="claimableYield"></p>
+            </div>
+
+            <div class="result-card">
+                <h3>Gas Parameters</h3>
+                <p id="gasParamsMode"></p>
+                <p id="gasParamsBalance"></p>
+                <p id="gasParamsGasMonths"></p>
+                <p id="gasParamsLastUpdate"></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
+    <script src="app.js?forceReload=1"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css">
+
+</body>
+</html>
