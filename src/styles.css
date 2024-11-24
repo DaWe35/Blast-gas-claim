@@ -45,23 +45,25 @@ a {
     width: 100%;
     margin-bottom: 20px;
     margin-top: 40px;
+    gap: 10px;
+    flex-wrap: wrap;
 }
 
 #contractAddress {
     flex: 1;
-    width: 500px;
+    width: auto;
     max-width: 100%;
     padding: 12px 24px;
     font-size: 20px;
     border: 1px solid #ccc;
     border-radius: 4px;
-    margin-right: 10px;
 }
 
 #checkContract {
     padding: 12px 24px;
     white-space: nowrap;
-    min-width: 160px;
+    width: auto;
+    margin: 0px;
 }
 
 button {
@@ -73,6 +75,9 @@ button {
     cursor: pointer;
     border: none;
     box-shadow: 0 0px 6px rgba(0,0,0,0.2);
+    margin-bottom: 5px;
+    margin-top: 5px;
+    margin-right: 10px;
 }
 
 .results-section {
@@ -221,5 +226,19 @@ header img {
 @keyframes loading-spinner {
     to {
         transform: rotate(360deg);
+    }
+}
+
+@media (max-width: 600px) {
+    .input-wrapper {
+        flex-direction: column;
+    }
+    
+    #contractAddress, #checkContract {
+        width: 100%;
+    }
+    
+    header h1 {
+        font-size: 2rem;
     }
 }
