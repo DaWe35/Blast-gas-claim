@@ -16,13 +16,6 @@ const BLAST_CHAIN_CONFIG = {
     blockExplorerUrls: ['https://blastscan.io']
 };
 
-// Add this to the top of the file with other constants
-const CHART_COLORS = {
-    total: '#4CAF50',     // Green
-    matured: '#2196F3',   // Blue
-    early: '#FFC107'      // Amber
-};
-
 // Add cache-related constants at the top with other constants
 const ETH_PRICE_CACHE_DURATION = 60 * 1000; // 1 minute in milliseconds
 
@@ -62,8 +55,9 @@ const utils = {
     },
 
     getSignificantDecimals(value) {
-        if (value === 0) return 2;
-        if (value >= 1) return 6;
+        if (value === 0) return 0;
+        if (value >= 1000) return 0;
+        if (value >= 1) return 2;
         const decimals = -Math.floor(Math.log10(value)) + 2;
         return Math.min(decimals, 18); // Cap at 18 decimals (ETH's max precision)
     },
