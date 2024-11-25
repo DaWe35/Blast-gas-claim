@@ -29,8 +29,14 @@ body {
 }
 
 a {
-    color: #dbdbdb;
     text-decoration: none;
+    color: rgb(var(--yellow-300));
+    text-decoration: none;
+    font-weight: bolder;
+}
+
+a:hover {
+    text-decoration: underline;
 }
 
 .container {
@@ -241,4 +247,9 @@ header img {
     header h1 {
         font-size: 2rem;
     }
+}
+
+.footer {
+    margin-top: 40px;
+    color: #fff;
 }
