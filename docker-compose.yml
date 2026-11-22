@@ -5,7 +5,7 @@ services:
     image: busybox
     container_name: blast-gas-claim
     ports:
-      - "9998:80"
+      - "127.0.0.1:9998:80"
     volumes:
       - ./src:/var/www:ro
     command: httpd -f -p 80 -h /var/www
